@@ -1,0 +1,19 @@
+{
+    "name": "kniebes/verify-url",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Kniebes\\VerifyUrl\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Markus Kniebes",
+            "email": "m@kniebes.to"
+        }
+    ],
+    "require": {
+        "php": ">=8.3",
+        "guzzlehttp/guzzle": "7.9"
+    }
+}
