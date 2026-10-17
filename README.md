@@ -17,7 +17,7 @@ Das Paket liegt nicht auf Packagist, sondern wird direkt aus dem Git-Repository 
     "repositories": [
         {
             "type": "git",
-            "url": "git@github.com:kniebes/verify-url.git"
+            "url": "https://github.com/kniebes/verify-url.git"
         }
     ]
 }
