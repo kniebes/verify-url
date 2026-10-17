@@ -37,7 +37,7 @@ class WaybackMachine
         $closest = $data['archived_snapshots']['closest'] ?? null;
 
         if (($closest['available'] ?? false) === true && !empty($closest['url'])) {
-            return $result->setIsValid(true)->setReplacement($closest['url']);
+            return $result->setIsValid(false)->setReplacement($closest['url']);
         }
 
         return $result->setIsValid(false)->addError('Wayback Machine: No snapshot found');
