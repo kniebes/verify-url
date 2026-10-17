@@ -2,6 +2,7 @@
 
 namespace Kniebes\VerifyUrl\Tools;
 
+use GuzzleHttp\Exception\ConnectException;
 use Kniebes\VerifyUrl\Model\Result;
 use Throwable;
 
@@ -11,8 +12,14 @@ class WaybackMachine
 
     private static ?float $lastRequestAt = null;
 
+    private static bool $isUnavailable = false;
+
     public static function findAlternative(string $url, Result $result): Result
     {
+        if (self::$isUnavailable) {
+            return $result->setIsValid(false)->addError('Wayback Machine: skipped, unavailable');
+        }
+
         self::waitForNextRequest();
 
         try {
@@ -22,7 +29,15 @@ class WaybackMachine
                 options: ['query' => ['url' => $url]]
             );
         } catch (Throwable $throwable) {
+            if (self::isTimeout($throwable)) {
+                self::$isUnavailable = true;
+            }
+
             return $result->setIsValid(false)->addError($throwable->getMessage());
+        }
+
+        if ($response->getStatusCode() === 429) {
+            self::$isUnavailable = true;
         }
 
         if ($response->getStatusCode() !== 200) {
@@ -40,7 +55,13 @@ class WaybackMachine
             return $result->setIsValid(false)->setReplacement($closest['url']);
         }
 
-        return $result->setIsValid(false)->addError('Wayback Machine: No snapshot found');
+        return $result->setIsValid(false)->setIsBroken(true)->addError('Wayback Machine: No snapshot found');
+    }
+
+    private static function isTimeout(Throwable $throwable): bool
+    {
+        return $throwable instanceof ConnectException
+            && ($throwable->getHandlerContext()['errno'] ?? null) === CURLE_OPERATION_TIMEDOUT;
     }
 
     private static function waitForNextRequest(): void

@@ -3,6 +3,7 @@
 namespace Kniebes\VerifyUrl;
 
 use GuzzleHttp\Exception\GuzzleException;
+use Kniebes\VerifyUrl\Exception\CloudflareChallengeException;
 use Kniebes\VerifyUrl\Exception\InvalidContentTypeException;
 use Kniebes\VerifyUrl\Exception\InvalidStatusException;
 use Kniebes\VerifyUrl\Exception\SpamDetectedException;
@@ -29,6 +30,9 @@ class VerifyUrl
                 result: (new Result(false))->addError($exception->getMessage())
             );
 
+        } catch (CloudflareChallengeException) {
+            return (new Result(isValid: false))->setIsCloudflare(true)->addError('Cloudflare challenge');
+
         } catch (InvalidContentTypeException) {
             return (new Result(isValid: true))->addError('Invalid content type '.$url);
         }
@@ -36,6 +40,7 @@ class VerifyUrl
 
     /**
      * @throws GuzzleException
+     * @throws CloudflareChallengeException
      * @throws InvalidContentTypeException
      * @throws InvalidStatusException
      */
@@ -55,6 +60,10 @@ class VerifyUrl
                 'stream' => true,
             ]
         );
+
+        if (strtolower($response->getHeaderLine('cf-mitigated')) === 'challenge') {
+            throw new CloudflareChallengeException();
+        }
 
         if ($response->getStatusCode() >= 400) {
             throw new InvalidStatusException($response->getStatusCode());

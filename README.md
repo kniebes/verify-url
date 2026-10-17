@@ -53,7 +53,7 @@ foreach ($result->getErrors() as $error) {
 
 `VerifyUrl::verify()` arbeitet in drei Schritten:
 
-1. **Abrufen:** Die URL wird per `GET` geladen. Bis zu fünf Weiterleitungen (HTTP und HTTPS) werden verfolgt. Ein Statuscode ab 400 gilt als Fehler.
+1. **Abrufen:** Die URL wird per `GET` geladen. Bis zu fünf Weiterleitungen (HTTP und HTTPS) werden verfolgt. Liefert Cloudflare eine Bot-Abfrage aus (Header `cf-mitigated: challenge`), endet die Prüfung hier, ohne die Wayback Machine zu fragen. Ein Statuscode ab 400 gilt als Fehler.
 2. **Inhalt prüfen:** Nur HTML (`text/html`, `application/xhtml+xml` oder fehlender `Content-Type`) wird gelesen, höchstens 5 MB. Danach durchsucht der `SpamDetector` den sichtbaren Text nach Spam-Begriffen.
 3. **Ersatz suchen:** Bei Netzwerkfehler, ungültigem Status oder erkanntem Spam wird die Wayback Machine (`archive.org/wayback/available`) nach dem nächstgelegenen Snapshot gefragt.
 
@@ -61,14 +61,18 @@ foreach ($result->getErrors() as $error) {
 
 Zurück kommt immer ein `Kniebes\VerifyUrl\Model\Result`, Exceptions werden intern abgefangen.
 
-| Situation | `isValid()` | `getReplacement()` | `getErrors()` |
-|---|---|---|---|
-| URL erreichbar, kein Spam | `true` | `null` | leer |
-| Kein HTML (z. B. PDF, Bild) | `true` | `null` | `Invalid content type …` |
-| URL kaputt/Spam, Snapshot gefunden | `false` | Snapshot-URL | Fehlergrund der Original-URL |
-| URL kaputt/Spam, kein Snapshot | `false` | `null` | Fehlergrund plus Wayback-Fehler |
+| Situation | `isValid()` | `isBroken()` | `isCloudflare()` | `getReplacement()` | `getErrors()` |
+|---|---|---|---|---|---|
+| URL erreichbar, kein Spam | `true` | `false` | `false` | `null` | leer |
+| Kein HTML (z. B. PDF, Bild) | `true` | `false` | `false` | `null` | `Invalid content type …` |
+| Cloudflare-Bot-Abfrage | `false` | `false` | `true` | `null` | `Cloudflare challenge` |
+| URL kaputt/Spam, Snapshot gefunden | `false` | `false` | `false` | Snapshot-URL | Fehlergrund der Original-URL |
+| URL kaputt/Spam, kein Snapshot vorhanden | `false` | `true` | `false` | `null` | Fehlergrund plus `Wayback Machine: No snapshot found` |
+| URL kaputt/Spam, Wayback Machine nicht erreichbar (z. B. 429) | `false` | `false` | `false` | `null` | Fehlergrund plus Wayback-Fehler |
 
 Ein gefundener Ersatz ändert nichts an `isValid()`: Die Original-URL bleibt ungültig.
+
+`isBroken()` ist nur dann `true`, wenn die Wayback Machine eindeutig geantwortet hat, dass es keinen Snapshot gibt. Der Link gilt damit als endgültig kaputt. Bei vorübergehenden Fehlern bleibt `isBroken()` `false`, eine erneute Prüfung kann also sinnvoll sein.
 
 ## Spam-Erkennung
 

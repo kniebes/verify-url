@@ -5,6 +5,8 @@ namespace Kniebes\VerifyUrl\Model;
 class Result
 {
     private array $errors = [];
+    private bool $isBroken = false;
+    private bool $isCloudflare = false;
     public function __construct(
         private bool $isValid,
         private ?string $replacement = null,
@@ -32,6 +34,30 @@ class Result
     public function setReplacement(?string $replacement): Result
     {
         $this->replacement = $replacement;
+
+        return $this;
+    }
+
+    public function isBroken(): bool
+    {
+        return $this->isBroken;
+    }
+
+    public function setIsBroken(bool $isBroken): Result
+    {
+        $this->isBroken = $isBroken;
+
+        return $this;
+    }
+
+    public function isCloudflare(): bool
+    {
+        return $this->isCloudflare;
+    }
+
+    public function setIsCloudflare(bool $isCloudflare): Result
+    {
+        $this->isCloudflare = $isCloudflare;
 
         return $this;
     }
